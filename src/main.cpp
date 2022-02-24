@@ -14,6 +14,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
+
 int main() {
   uWS::Hub h;
 
@@ -111,44 +112,138 @@ int main() {
             car_s = end_path_s;
           }
           
-          bool too_close = false;
           
-          // find ref_vel to use
-          for(int i = 0; i < sensor_fusion.size(); i++)
-          {
-            //car in my lane
-            float d = sensor_fusion[i][6];
-            if(d < (2+4*lane +2) && d > (2+4*lane-2))
-            {
+          
+          bool is_too_close = false;
+          bool is_left_lane_occupied = false;
+          bool is_right_lane_occupied = false;
+          double MAX_VEL = 49.5;
+          double MAX_ACC = 0.224; //acceleration around 5m/s^2
+          double safety_margin = 30.0;
+
+          for (int i = 0; i < sensor_fusion.size(); i++) {
+              //car in my lane
+              float d = sensor_fusion[i][6];
+              // Identify the lane of the car in question
+              int car_lane;
+              if (d >= 0 && d < 4) {
+                  car_lane = 0;
+              }else if (d >= 4 && d < 8) {
+                  car_lane = 1;
+              }else if (d >= 8 && d <= 12) {
+                  car_lane = 2;
+              }else {
+                  continue;
+              }
               double vx = sensor_fusion[i][3];
               double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx+vy*vy);
+              double check_speed = sqrt(vx * vx + vy * vy);
               double check_car_s = sensor_fusion[i][5];
-              
-              check_car_s += ((double)prev_size*0.2*check_speed); //if using previous points can project s value out
-              //check s values greater than mine and s gap
-              if((check_car_s > car_s) && ((check_car_s - car_s) <30))
-              {
-                //do some logic here, lower reference velocity so we dont crash into the car in front of us, could also 				flag to try to change lanes.
-                //ref_vel = 29.5; //mph
-                too_close = true;
-                if(lane > 0)
-                {
-                  lane = 0;
-                }
+			  //std::cout << "check_car_s" << i<< " is" << check_car_s << std::endl;
+              check_car_s += ((double)prev_size * 0.02 * check_speed); //if using previous points can project s value out         
+              //check if car is in my lane
+              if (car_lane == lane) {
+                  is_too_close |= (check_car_s > car_s) && ((check_car_s - car_s) < safety_margin);                 
+              }else if (lane - car_lane == 1) {//check if left lane is free
+                  is_left_lane_occupied |= (check_car_s > car_s - safety_margin) && (check_car_s < car_s + safety_margin);
+              }else if (car_lane - lane == 1) {//check if right lane is free
+                  is_right_lane_occupied |= (check_car_s > car_s - safety_margin) && (check_car_s < car_s + safety_margin);
               }
-            }
           }
+          std::cout << "one cycle is finished  " << std::endl;
+          // actually perform lane change
+          if (is_too_close) {
+              //A car is ahead, decide to change lane or slow down
+              if (!is_left_lane_occupied && lane > 0) {
+                  //shift to left
+                  lane -= 1;
+              }else if (!is_right_lane_occupied && lane < 2) {
+                  //shift to right
+                  lane += 1;
+              }else {
+                  //Nowhere to shift slow down
+                  ref_vel -= MAX_ACC;
+              }
+          }else {//if there is no car in front
+              if (lane != 1) {
+                  // Not in the center lane. Check if it is safe to move back
+                  if ((lane == 2 && !is_left_lane_occupied) || (lane == 0 && !is_right_lane_occupied)) {
+                      // Move back to the center lane
+                      lane = 1;
+                  }
+              }
+              if (ref_vel < MAX_VEL) {
+                  ref_vel += MAX_ACC;
+              }
+          }
+   
           
-          if(too_close)
-          {
-            ref_vel -= .224;
+          /* //another type of planner
+          bool is_too_close = false;
+          bool is_left_lane_occupied = false;
+          bool is_right_lane_occupied = false;
+          double MAX_VEL = 49.5;
+          double MAX_ACC = 0.224; //acceleration around 5m/s^2
+          double safety_margin = 30.0;
+
+          for (int i = 0; i < sensor_fusion.size(); i++) {
+              //car in my lane
+              float d = sensor_fusion[i][6];
+              // Identify the lane of the car in question
+              int car_lane;
+              if (d >= 0 && d < 4) {
+                  car_lane = 0;
+              }else if (d >= 4 && d < 8) {
+                  car_lane = 1;
+              }else if (d >= 8 && d <= 12) {
+                  car_lane = 2;
+              }else {
+                  continue;
+              }
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx * vx + vy * vy);
+              double check_car_s = sensor_fusion[i][5];
+			  //std::cout << "check_car_s" << i<< " is" << check_car_s << std::endl;
+              check_car_s += ((double)prev_size * 0.02 * check_speed); //if using previous points can project s value out         
+              //check if car is in my lane
+              if (car_lane == lane) {
+                  is_too_close |= (check_car_s > car_s) && ((check_car_s - car_s) < safety_margin);                 
+              }else if (lane - car_lane == 1) {//check if left lane is free
+                  is_left_lane_occupied |= (check_car_s > car_s - safety_margin) && (check_car_s < car_s + safety_margin);
+              }else if (car_lane - lane == 1) {//check if right lane is free
+                  is_right_lane_occupied |= (check_car_s > car_s - safety_margin) && (check_car_s < car_s + safety_margin);
+              }
           }
-          else if(ref_vel < 49.5)
-          {
-            ref_vel += .224;
-          }
+          std::cout << "one cycle is finished  " << std::endl;
+          // actually perform lane change
+          if (is_too_close) {
+              //A car is ahead, decide to change lane or slow down
+              if (!is_left_lane_occupied && lane > 0) {
+                  //shift to left
+                  lane -= 1;
+              }else if (!is_right_lane_occupied && lane < 2) {
+                  //shift to right
+                  lane += 1;
+              }else {
+                  //Nowhere to shift slow down
+                  ref_vel -= MAX_ACC;
+              }
+          }else {//if there is no car in front
+              if (lane != 1) {
+                  // Not in the center lane. Check if it is safe to move back
+                  if ((lane == 2 && !is_left_lane_occupied) || (lane == 0 && !is_right_lane_occupied)) {
+                      // Move back to the center lane
+                      lane = 1;
+                  }
+              }
+              if (ref_vel < MAX_VEL) {
+                  ref_vel += MAX_ACC;
+              }
+          }*/
           
+          
+
           
           //create a list of widely spaced (x, y) waypoints, evenly spaced at 30m
           // later we will interpolate these waypoints with a spline and fill it in with more points that control speed
@@ -241,9 +336,30 @@ int main() {
           
           double x_add_on = 0;
           
+          //double MAX_VEL = 49.5;
+          //double MAX_ACC = 0.224;
+          
           //fill up the rest of our path planner after filling it with previous points, here we will always output 50 points
           for(int i = 1; i <= 50 - previous_path_x.size(); i++){
+            /*ref_vel += ref_vel;
+            if(ref_vel > MAX_VEL)
+            {
+              ref_vel = MAX_VEL;
+            }else if(ref_vel <MAX_ACC)
+            {
+              ref_vel = MAX_ACC;
+            }*/
             
+            /*if(too_close)
+            {
+              ref_vel -= MAX_ACC;
+            }else if(ref_vel < MAX_VEL)
+            {
+              ref_vel += MAX_ACC;
+            }else if(ref_vel > MAX_VEL)
+            {
+              ref_vel = MAX_VEL;
+            }*/
             double N = (target_dist/(.02*ref_vel/2.24)); // ref_vel is in miles/hour
             double x_point = x_add_on + target_x/N;
             double y_point = s(x_point);
@@ -257,7 +373,7 @@ int main() {
             x_point = x_ref*cos(ref_yaw)-y_ref*sin(ref_yaw);
             y_point = x_ref*sin(ref_yaw)+y_ref*cos(ref_yaw);
             
-            x_point += ref_x;
+            x_point += ref_x; //ref_x is not x_ref, adding ref_x is to shift the local coordinate to global coordinate
             y_point += ref_y;
             
             next_x_vals.push_back(x_point);
