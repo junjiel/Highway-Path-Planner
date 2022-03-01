@@ -14,10 +14,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-<<<<<<< HEAD
 
-=======
->>>>>>> bb4a5c6... Vehicle can drive in a lane and make basic lane change maneuver.
 int main() {
   uWS::Hub h;
 
@@ -115,8 +112,6 @@ int main() {
             car_s = end_path_s;
           }
           
-<<<<<<< HEAD
-<<<<<<< HEAD
           
           
           bool is_too_close = false;
@@ -140,33 +135,10 @@ int main() {
               }else {
                   continue;
               }
-=======
-          bool is_too_close = false;
-          bool prepare_for_lane_change = false;
-          bool ready_for_lane_change = false;
-          bool is_left_lane_free = true;
-          bool is_right_lane_free = true;
-          double MAX_VEL = 49.5;
-          double MAX_ACC = 0.224; //acceleration around 5m/s^2
-          double safety_margin = 30.0;
-=======
-          bool too_close = false;
-          
->>>>>>> bb4a5c6... Vehicle can drive in a lane and make basic lane change maneuver.
-          // find ref_vel to use
-          for(int i = 0; i < sensor_fusion.size(); i++)
-          {
-            //car in my lane
-            float d = sensor_fusion[i][6];
-            if(d < (2+4*lane +2) && d > (2+4*lane-2))
-            {
-<<<<<<< HEAD
->>>>>>> 7ae0547a893f823ce767b1e01d1b04ff1b2c5e5b
               double vx = sensor_fusion[i][3];
               double vy = sensor_fusion[i][4];
               double check_speed = sqrt(vx * vx + vy * vy);
               double check_car_s = sensor_fusion[i][5];
-<<<<<<< HEAD
 			  //std::cout << "check_car_s" << i<< " is" << check_car_s << std::endl;
               check_car_s += ((double)prev_size * 0.02 * check_speed); //if using previous points can project s value out         
               //check if car is in my lane
@@ -242,81 +214,6 @@ int main() {
               }else if (car_lane - lane == 1) {//check if right lane is free
                   is_right_lane_occupied |= (check_car_s > car_s - safety_margin) && (check_car_s < car_s + safety_margin);
               }
-=======
-              
-              check_car_s += ((double)prev_size*0.2*check_speed); //if using previous points can project s value out
-              //check s values greater than mine and s gap
-              if((check_car_s > car_s) && ((check_car_s - car_s) <safety_margin))
-              {
-                //do some logic here, lower reference velocity so we dont crash into the car in front of us, could also flag to try to change lanes.
-                //ref_vel = 29.5; //mph
-                is_too_close = true;
-                prepare_for_lane_change = true;         
-              }
-            }
-          }
-          if(prepare_for_lane_change){
-            int num_vehicles_left = 0;
-            int num_vehicles_right = 0;
-            //check if left and right lanes are free
-            for(int i = 0; i < sensor_fusion.size(); i++){
-              float d = sensor_fusion[i][6];
-             //check left lane
-              if(d < (2+4*(lane-1) +2) && d > (2+4*(lane-1)-2)){
-                ++num_vehicles_left;
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx*vx+vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-                check_car_s += ((double)prev_size*0.2*check_speed);
-                
-                bool too_close_to_change = (check_car_s > car_s - safety_margin/2) && (check_car_s < car_s + safety_margin/2);
-                if(too_close_to_change){
-                  is_left_lane_free = false;
-                }
-              }
-              //check right lane
-              else if(d < (2+4*(lane+1) +2) && d > (2+4*(lane+1)-2)){
-                ++num_vehicles_right;
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx*vx+vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-                check_car_s += ((double)prev_size*0.2*check_speed);
-                
-                bool too_close_to_change = (check_car_s > car_s - safety_margin/2) && (check_car_s < car_s + safety_margin/2);
-                if(too_close_to_change){
-                  is_right_lane_free = false;
-                }
-              } 
-              
-              if(is_left_lane_free || is_right_lane_free){
-                ready_for_lane_change = true;
-              }
-            
-            }
-            std::cout << "LEFT " << num_vehicles_left << "RIGHT " << num_vehicles_right << std::endl;
-          }
-          
-          
-          // actually perform lane change
-          if(ready_for_lane_change && is_left_lane_free && lane >0){
-            lane -= 1;
-          }
-          else if(ready_for_lane_change && is_right_lane_free && lane < 2 ){
-            lane += 1;
-          }
-          
-          
-          
-          if(is_too_close)
-          {
-            ref_vel -= MAX_ACC; 
-          }
-          else if(ref_vel < MAX_VEL)
-          {
-            ref_vel += MAX_ACC;
->>>>>>> 7ae0547a893f823ce767b1e01d1b04ff1b2c5e5b
           }
           std::cout << "one cycle is finished  " << std::endl;
           // actually perform lane change
@@ -345,44 +242,9 @@ int main() {
               }
           }*/
           
-<<<<<<< HEAD
           
 
           
-=======
->>>>>>> 7ae0547a893f823ce767b1e01d1b04ff1b2c5e5b
-=======
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx+vy*vy);
-              double check_car_s = sensor_fusion[i][5];
-              
-              check_car_s += ((double)prev_size*0.2*check_speed); //if using previous points can project s value out
-              //check s values greater than mine and s gap
-              if((check_car_s > car_s) && ((check_car_s - car_s) <30))
-              {
-                //do some logic here, lower reference velocity so we dont crash into the car in front of us, could also 				flag to try to change lanes.
-                //ref_vel = 29.5; //mph
-                too_close = true;
-                if(lane > 0)
-                {
-                  lane = 0;
-                }
-              }
-            }
-          }
-          
-          if(too_close)
-          {
-            ref_vel -= .224;
-          }
-          else if(ref_vel < 49.5)
-          {
-            ref_vel += .224;
-          }
-          
-          
->>>>>>> bb4a5c6... Vehicle can drive in a lane and make basic lane change maneuver.
           //create a list of widely spaced (x, y) waypoints, evenly spaced at 30m
           // later we will interpolate these waypoints with a spline and fill it in with more points that control speed
           vector<double> ptsx;
@@ -474,7 +336,6 @@ int main() {
           
           double x_add_on = 0;
           
-<<<<<<< HEAD
           //double MAX_VEL = 49.5;
           //double MAX_ACC = 0.224;
           
@@ -499,11 +360,6 @@ int main() {
             {
               ref_vel = MAX_VEL;
             }*/
-=======
-          //fill up the rest of our path planner after filling it with previous points, here we will always output 50 points
-          for(int i = 1; i <= 50 - previous_path_x.size(); i++){
-            
->>>>>>> bb4a5c6... Vehicle can drive in a lane and make basic lane change maneuver.
             double N = (target_dist/(.02*ref_vel/2.24)); // ref_vel is in miles/hour
             double x_point = x_add_on + target_x/N;
             double y_point = s(x_point);
@@ -517,11 +373,7 @@ int main() {
             x_point = x_ref*cos(ref_yaw)-y_ref*sin(ref_yaw);
             y_point = x_ref*sin(ref_yaw)+y_ref*cos(ref_yaw);
             
-<<<<<<< HEAD
             x_point += ref_x; //ref_x is not x_ref, adding ref_x is to shift the local coordinate to global coordinate
-=======
-            x_point += ref_x;
->>>>>>> bb4a5c6... Vehicle can drive in a lane and make basic lane change maneuver.
             y_point += ref_y;
             
             next_x_vals.push_back(x_point);
